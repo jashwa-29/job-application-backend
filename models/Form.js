@@ -1,6 +1,13 @@
 const mongoose = require('mongoose');
+const Counter = require('./Counter');
 
 const formSchema = new mongoose.Schema({
+  userId: {
+    type: String,
+    unique: true,
+    uppercase: true,
+    index: true
+  },
   name: {
     type: String,
     required: [true, 'Name is required'],
@@ -102,13 +109,34 @@ const formSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Pre-save middleware to generate userId
+formSchema.pre('save', async function(next) {
+  if (!this.isNew) {
+    return next();
+  }
+  
+  try {
+    const counter = await Counter.findOneAndUpdate(
+      { name: 'formUserId' },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
+
+    const year = new Date().getFullYear().toString().slice(-2); // Last 2 digits of current year
+    const sequence = counter.seq.toString().padStart(4, '0');
+    this.userId = `CVM${year}${sequence}`;
+    
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Indexes for better performance
+formSchema.index({ userId: 1 });
 formSchema.index({ email: 1 });
 formSchema.index({ mobile: 1 });
 formSchema.index({ submissionDate: -1 });
 formSchema.index({ nativeDistrict: 1 });
-
-// Compound index for unique constraint if needed
-// formSchema.index({ email: 1, mobile: 1 }, { unique: true });
 
 module.exports = mongoose.model('Form', formSchema);

@@ -28,6 +28,7 @@ const createForm = async (req, res, next) => {
       message: 'Form submitted successfully',
       data: {
         id: savedForm._id,
+          userId: savedForm.userId, 
         submissionDate: savedForm.submissionDate
       }
     });
